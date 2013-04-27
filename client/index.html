@@ -1,18 +1,519 @@
 <!DOCTYPE html>
 <html>
 <head>
-<script src="assets/extlibs/easeljs.js"></script>
+<script src="assets/extlibs/jquery.min.js"></script>
+<script src="assets/extlibs/underscore.min.js"></script>
+<script src="assets/extlibs/easeljs-0.6.0.min.js"></script>
 <script type="text/javascript">
+$(document).ready(function() {
+    var stage = new createjs.Stage("map");
+    var map = new createjs.Shape();
+    map.graphics.beginFill("white").drawRect(0, 0, 800, 600);
+
+	map.onClick = function(e) {alert(e.stageX+', '+e.stageY)};
+
+    stage.addChild(map);
+
+    drawRoads(stage);
+    drawCities(stage);
+
+    drawPath(stage, ["resita", "timisoara", "arad", "oradea"]);
+
+    stage.update();
+});
+
+/**
+ * Draw roads
+ * Position labels
+ * Have labels respond to clicks
+ * Set up UI events
+   - click on Start button
+     - clear tables
+     - clear roads
+     - clear city selections
+     - disable Start
+   - click on city or label
+     - first
+       - enable Clear button
+       - add the city to each of the tables
+     - second or subsequent
+       - enable Process button
+       - add the city to each of the tables
+   - click on Clear button
+     - clear all selected cities
+     - clear tables
+     - disable Process button
+     - disable Clear button
+   - click on Process button
+     - disable all buttons
+   - when Process is complete
+     - enable Start button
+   * Create working version (remove CSS?)
+
+   * Write function(s) in JS on client
+     - depth-first
+     - breadth-first
+     - uniform-cost
+     - research Dykstra & A*
+   * Display results in tables
+   * Add notations to HTML
+   * Add km markers
+   * Move processing to WebSockets & Node JS
+   * Move storage to Neo4j
+ */
+
+function drawCities(stage) {
+	var c = App.Graph.nodes.length;
+	var node;
+	for (var i=0; i < c; i++) {
+		node = App.Graph.nodes[i];
+		drawCityMarker(stage, node);
+		drawCityLabel(stage, node);
+	}
+}
+function drawCityMarker(stage, p, status) {
+	var city = new createjs.Shape();
+	var color = status == 'selected' ? 'black' : 
+			status == 'filled' ? '#819FF7' : 
+			'white';
+
+	city.graphics.ss().s('#819FF7').f(color).drawCircle(p.xCenter, p.yCenter, 5);
+	city.onClick = function(e) {alert(p.name)};
+
+	stage.addChild(city);
+}
+function drawRoads(stage) {
+	var sh;
+	var color = '#819FF7';
+
+	var c = App.Graph.edges.length;
+	var edge, node1, node2;
+	for (var i=0; i < c; i++) {
+		edge = App.Graph.edges[i];
+		n1 = App.Graph.getNode(edge.nodes[0]);
+		n2 = App.Graph.getNode(edge.nodes[1]);
+
+		sh = new createjs.Shape();
+		sh.graphics.mt(n1.xCenter, n1.yCenter).ss(2).s(color).lt(n2.xCenter, n2.yCenter);
+		stage.addChild(sh);
+
+		drawDistanceLabel(stage, edge);
+	}
+}
+function highlightRoad(stage, n1, n2) {
+	var color = '#819FF7';
+	var sh = new createjs.Shape();
+	sh.graphics.mt(n1.xCenter, n1.yCenter).ss(10).s('rgba(129, 159, 247, .2)').lt(n2.xCenter, n2.yCenter);
+	stage.addChild(sh);
+}
+function drawPath(stage, path) {
+	var n1, n2;
+	n1 = App.Graph.getNode(path[0]);
+	for (var i=1; i < path.length; i++) {
+		n2 = App.Graph.getNode(path[i]);
+		highlightRoad(stage, n1, n2);
+		n1 = n2;
+	}
+
+	for (var i=0; i < path.length; i++) {
+		drawCityMarker(stage, App.Graph.getNode(path[i]), (i==0 || i>=path.length-1) ? 'selected' : 'filled');
+	}
+}
+function drawCityLabel(stage, p) {
+	var text = new createjs.Text(formatText(convertHexText(p.display), 'map'), "14px Arial", "#333");
+	text.x = p.xLabel;
+	text.y = p.yLabel;
+	text.textBaseline = "alphabetic";
+	stage.addChild(text);
+}
+function drawDistanceLabel(stage, p) {
+	var text = new createjs.Text(p.distance, "12px Arial", "#ccc");
+	text.x = p.xLabel;
+	text.y = p.yLabel;
+	text.textBaseline = "alphabetic";
+	stage.addChild(text);
+}
+function convertHexText(s) {
+	/*
+	\\x15F; hexCedilla (s?)
+	\\xE2; hexACircumflex (a^)
+	\\x103; hexABreve (a))
+	*/
+	s = s.replace(/\[hexCedilla\]/gi, String.fromCharCode(parseInt("\\x15F".substr(2), 16)));
+	s = s.replace(/\[hexABreve\]/gi, String.fromCharCode(parseInt("\\x103".substr(2), 16)));
+	s = s.replace(/\[hexACircumflex\]/gi, String.fromCharCode(parseInt("\\xE2".substr(2), 16)));
+	return s;
+}
+function formatText(s, context) {
+	return s.replace(/\[BR\]/gi, context=='map' ? '\n' : ' ');
+}
+
+
+var App = {};
+App.Graph = {};
+App.Graph.nodes = [
+	{"name":"arad", 
+		"edges":["arad-timisoara", "arad-oradea", "arad-deva"], 
+		"display":"Arad", "xCenter":40, "yCenter":270, 
+		"xLabel":56, "yLabel":265, "filled":false},
+	{"name":"timisoara",
+		"edges":["arad-timisoara", "timisoara-resita", "timisoara-deva"],  
+		"display":"Timi[hexCedilla]oara", "xCenter":15, "yCenter":340, 
+		"xLabel":35, "yLabel":350, "filled":false},
+	{"name":"oradea", "display":"Oradea", "xCenter":95, "yCenter":135, "xLabel":105, "yLabel":145, "filled":false},
+	{"name": "resita", "display":"Re[hexCedilla]ita", "xCenter":80, "yCenter":390, "xLabel":90, "yLabel":400, "filled":false},
+	{"name": "drobetatumu", "display":"Drobeta-Tumu", "xCenter":160, "yCenter":470, "xLabel":170, "yLabel":480, "filled":false},
+	{"name": "craiova", "display":"Craiova", "xCenter":280, "yCenter":510, "xLabel":290, "yLabel":520, "filled":false},
+	{"name": "satumare", "display":"Satu Mare", "xCenter":165, "yCenter":30, "xLabel":175, "yLabel":40, "filled":false},
+	{"name": "baiamare", "display":"Baia Mare", "xCenter":226, "yCenter":53, "xLabel":236, "yLabel":63, "filled":false},
+	{"name": "zalau", "display":"Zal[hexABreve]u", "xCenter":205, "yCenter":125, "xLabel":215, "yLabel":135, "filled":false},
+	{"name": "bistrita", "display":"Bistrita", "xCenter":349, "yCenter":138, "xLabel":359, "yLabel":148, "filled":false},
+	{"name": "viseudesus", "display":"Viseu de Sus", "xCenter":332, "yCenter":51, "xLabel":342, "yLabel":61, "filled":false},
+	{"name": "deva", "display":"Deva", "xCenter":155, "yCenter":310, "xLabel":165, "yLabel":320, "filled":false},
+	{"name": "clujnapoca", "display":"Cluj-Napoca", "xCenter":246, "yCenter":181, "xLabel":256, "yLabel":191, "filled":false},
+	{"name": "targumures", "display":"T[hexACircumflex]rgu Mure[hexCedilla]", "xCenter":376, "yCenter":220, "xLabel":386, "yLabel":230, "filled":false},
+	{"name": "albaiulia", "display":"Alba Iulia", "xCenter":234, "yCenter":297, "xLabel":244, "yLabel":307, "filled":false},
+	{"name": "medias", "display":"Medias", "xCenter":325, "yCenter":290, "xLabel":335, "yLabel":300, "filled":false},
+	{"name": "ramnicuvalcea", "display":"R[hexACircumflex]mnicu V[hexACircumflex]lcea", "xCenter":347, "yCenter":418, "xLabel":357, "yLabel":428, "filled":false},
+	{"name": "sacele", "display":"S[hexABreve]cele", "xCenter":472, "yCenter":333, "xLabel":482, "yLabel":334, "filled":false},
+	{"name": "odorheiusecuiesc", "display":"Odorheiu Secuiesc", "xCenter":452, "yCenter":253, "xLabel":462, "yLabel":263, "filled":false},
+	{"name": "miercureaciuc", "display":"Miercurea-Ciuc", "xCenter":518, "yCenter":230, "xLabel":528, "yLabel":240, "filled":false},
+	{"name": "piatraneamt", "display":"Piatra[BR]Neamt", "xCenter":560, "yCenter":150, "xLabel":570, "yLabel":160, "filled":false},
+	{"name": "suceava", "display":"Suceava", "xCenter":531, "yCenter":57, "xLabel":541, "yLabel":67, "filled":false},
+	{"name": "botosani", "display":"Boto[hexCedilla]ani", "xCenter":600, "yCenter":25, "xLabel":610, "yLabel":35, "filled":false},
+	{"name": "bacau", "display":"Bac[hexABreve]u", "xCenter":638, "yCenter":192, "xLabel":648, "yLabel":202, "filled":false},
+	{"name": "iasi", "display":"Iasi", "xCenter":740, "yCenter":94, "xLabel":750, "yLabel":104, "filled":false},
+	{"name": "vaslui", "display":"Vaslui", "xCenter":757, "yCenter":175, "xLabel":735, "yLabel":195, "filled":false},
+	{"name": "barlad", "display":"B[hexACircumflex]rlad", "xCenter":720, "yCenter":242, "xLabel":695, "yLabel":265, "filled":false},
+	{"name": "onesti", "display":"One[hexCedilla]ti", "xCenter":617, "yCenter":251, "xLabel":627, "yLabel":261, "filled":false},
+	{"name": "targujiu", "display":"T[hexACircumflex]rgu Jiu", "xCenter":231, "yCenter":415, "xLabel":241, "yLabel":425, "filled":false},
+	{"name": "pitesti", "display":"Pite[hexCedilla]ti", "xCenter":393, "yCenter":459, "xLabel":403, "yLabel":469, "filled":false},
+	{"name": "targoviste", "display":"T[hexACircumflex]rgovi[hexCedilla]te", "xCenter":443, "yCenter":437, "xLabel":453, "yLabel":447, "filled":false},
+	{"name": "ploiesti", "display":"Ploie[hexCedilla]ti", "xCenter":513, "yCenter":434, "xLabel":523, "yLabel":444, "filled":false},
+	{"name": "bucharest", "display":"Bucharest", "xCenter":530, "yCenter":488, "xLabel":540, "yLabel":498, "filled":false},
+	{"name": "giurgiu", "display":"Giurgiu", "xCenter":500, "yCenter":580, "xLabel":510, "yLabel":590, "filled":false},
+	{"name": "alexandria", "display":"Alexandria", "xCenter":453, "yCenter":555, "xLabel":463, "yLabel":565, "filled":false},
+	{"name": "calarasi", "display":"C[hexABreve]l[hexABreve]ra[hexCedilla]i", "xCenter":655, "yCenter":540, "xLabel":665, "yLabel":550, "filled":false},
+	{"name": "constanta", "display":"Constanta", "xCenter":775, "yCenter":490, "xLabel":725, "yLabel":510, "filled":false},
+	{"name": "focsani", "display":"Foc[hexCedilla]ani", "xCenter":654, "yCenter":328, "xLabel":664, "yLabel":338, "filled":false},
+	{"name": "galati", "display":"Galati", "xCenter":713, "yCenter":375, "xLabel":723, "yLabel":385, "filled":false},
+	{"name": "buzau", "display":"Buz[hexABreve]u", "xCenter":610, "yCenter":390, "xLabel":620, "yLabel":400, "filled":false}
+];
+App.Graph.edges = [
+	{"name":"arad-timisoara", "nodes":["arad", "timisoara"], 
+		"distance":40, "xLabel":18, "yLabel":295},
+	{"name":"arad-oradea", "nodes":["arad", "oradea"], 
+		"distance":85, "xLabel":52, "yLabel":189},
+	{"name":"arad-deva", "nodes":["arad", "deva"], 
+		"distance":80, "xLabel":104, "yLabel":281},
+	{"name":"timisoara-deva", "nodes":["timisoara", "deva"],
+		"distance":100, "xLabel":75, "yLabel":319},
+	{"name":"timisoara-resita", "nodes":["timisoara", "resita"],
+		"distance":60, "xLabel":35, "yLabel":385},
+];
+App.Graph.getNode = function(n) {
+	var c = App.Graph.nodes.length;
+	for (var i=0; i < c; i++) {
+		if (n.toLowerCase() == App.Graph.nodes[i].name) return App.Graph.nodes[i];
+	}
+	return null;
+}
+App.Graph.getEdge = function(n) {
+	var c = App.Graph.edges.length;
+	for (var i=0; i < c; i++) {
+		if (n.toLowerCase() == App.Graph.edges[i].name) return App.Graph.edges[i];
+	}
+	return null;
+}
+App.Graph.getEdgeConnecting = function(n1, n2) {
+	var edge;
+	var c = App.Graph.edges.length;
+	for (var i=0; i < c; i++) {
+		edge = App.Graph.edges[i];
+		if (_.contains(edge.nodes, n1) &&
+			_.contains(edge.nodes, n2))
+			return edge;
+	}
+	return null;
+}
+
+	/**
+	* Satu Mare
+	* Baia Mare
+	* Zal[hexABreve]u
+	* Oradea
+	* Timisora
+	* Arad
+	* T[hexACircumflex]rgu Mure[hexCedilla]
+	* Re[hexCedilla]ita
+	* Viseu de Sus
+	* Cluj-Napoca
+	* Deva
+	* Alba Iulia
+	* Bistrita
+	* Drobeta-Tumu
+	* Craiova
+	* T[hexACircumflex]rgu Jiu
+	* R[hexACircumflex]mnicu V[hexACircumflex]lcea
+	* Medias
+	* S[hexABreve]cele
+	* Odorheiu Secuiesc
+	* Miercurea-Ciuc
+	* One[hexCedilla]ti
+	* Foc[hexCedilla]ani
+	* Piatra Neamt
+	* Suceava
+	* Boto[hexCedilla]ani
+	* Bac[hexABreve]u
+	* Iasi
+	* Vaslui
+	* B[hexACircumflex]rlad
+	* Galati
+	* Buz[hexABreve]u
+	* Pite[hexCedilla]ti
+	* T[hexACircumflex]rgovi[hexCedilla]te
+	* Ploie[hexCedilla]ti
+	* Bucharest
+	* Alexandria
+	* Giurgiu
+	* C[hexABreve]l[hexABreve]ra[hexCedilla]i
+	* Constanta
+	*/
 </script>
+<style>
+body {
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+	background-color: #81BEF7;
+	margin: 20px 0 20px 0;
+	padding: 0;
+}
+canvas {
+	width: 800px;
+	height: 600px;
+}
+table caption {
+	color: white;
+	text-align: left;
+	font-size: 18px;
+	font-weight: bold;
+	margin-bottom: 0;
+	padding-bottom: 0;
+}
+table caption span {
+	color: #EFF2FB;
+	font-weight: normal;
+}
+thead {
+	border-bottom: 1px solid black;
+}
+thead tr > th {
+	padding-bottom: 3px;
+}
+thead tr > th.city {
+	width: 46%;
+}
+thead tr > th.step,
+thead tr > th.distance {
+	width: 27%;
+}
+tbody {
+	background-color: white;
+}
+tbody tr > td {
+	padding-top: 3px;
+	padding-bottom: 3px;
+}
+tfoot {
+	border-top: 1px solid black;
+}
+tfoot tr > th {
+	padding-top: 3px;
+}
+tfoot th .value {
+	color: #EFF2FB;
+}
+th.columnheading {
+	color: black;
+}
+#container {
+	width: 1084px;
+	margin-left: auto;
+	margin-right: auto;
+}
+.column {
+	display: inline-block;
+	vertical-align: top;
+	margin: 0;
+	padding: 0;
+}
+.boundary {
+	width: 138px;
+}
+.boundary.romaniatext {
+	background: transparent url('assets/images/romania.png') no-repeat right top;
+	min-height: 600px;
+}
+#content {
+	width: 800px;
+	margin: 0;
+	padding: 0;
+}
+#map {
+	margin-top: 0;
+}
+#controls {
+	width: 130px;
+	margin-left: auto;
+	margin-right: auto;
+}
+#controls button {
+	margin-left: 5px;
+	margin-right: 5px;
+	min-width: 50px;
+}
+#datatables {
+	width: 600px;
+	margin-left: auto;
+	margin-right: auto;
+}
+.datacontainer {
+	margin-top: 30px;
+	padding-top: 10px;
+}
+#buttons {
+	margin-left: auto;
+	margin-right: auto;
+}
+.textleft { text-align: left; padding-left: 3px }
+.textright { text-align: right; padding-right: 3px;}
+</style>
 </head>
 <body>
-<canvas id="map" width="800" height="600"></canvas>
-<section id="controls"></section>
-<section>
-</section>
-<section>
-</section>
-<section>
-</section>
+	<div id="container">
+		<div class="column boundary"></div>
+		<div id="content" class="column">
+			<canvas id="map" width="800" height="600"></canvas>
+
+			<section id="controls">
+				<button type="button">Start</button> 
+				<button type="button">Clear</button>
+			</section>
+
+			<section id="datatables">
+				<div id="quickest-path" class="datacontainer">
+					<table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<caption>Find path most quickly</caption>
+						<thead>
+							<tr>
+								<th class="textleft city"></th>
+								<th class="textright columnheading step">Step</th>
+								<th class="textright columnheading distance">Distance (km)</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td class="textleft">Adom</td>
+								<td class="textright">&mdash;</td>
+								<td class="textright">&mdash;</td>
+							</tr>
+							<tr>
+								<td class="textleft">Zagreb</td>
+								<td class="textright">1</td>
+								<td class="textright">24</td>
+							</tr>
+						</tbody>
+						<tfoot>
+							<tr>
+								<th class="textright">Elapsed Time:</th>
+								<th class="textright"><span class="value">[steps]</span></th>
+								<th class="textright"><span class="value">[km]</span></th>
+							</tr>
+						</tfoot>
+					</table>
+				</div>
+
+				<div id="shortest-path" class="datacontainer">
+					<table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<caption>Find shortest path <span>(in terms of steps)</span></caption>
+						<thead>
+							<tr>
+								<th class="textleft city"></th>
+								<th class="textright columnheading step">Step</th>
+								<th class="textright columnheading distance">Distance (km)</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td class="textleft">Adom</td>
+								<td class="textright">&mdash;</td>
+								<td class="textright">&mdash;</td>
+							</tr>
+							<tr>
+								<td class="textleft">Zagreb</td>
+								<td class="textright">1</td>
+								<td class="textright">24</td>
+							</tr>
+							<tr>
+								<td class="textleft">Hellertown</td>
+								<td class="textright">2</td>
+								<td class="textright">24</td>
+							</tr>
+							<tr>
+								<td class="textleft">Easton</td>
+								<td class="textright">3</td>
+								<td class="textright">24</td>
+							</tr>
+							<tr>
+								<td class="textleft">Bethlehem</td>
+								<td class="textright">4</td>
+								<td class="textright">24</td>
+							</tr>
+						</tbody>
+						<tfoot>
+							<tr>
+								<th class="textright">Elapsed Time:</th>
+								<th class="textright"><span class="value">[steps]</span></th>
+								<th class="textright"><span class="value">[km]</span></th>
+							</tr>
+						</tfoot>
+					</table>
+				</div>
+
+				<div id="lowest-cost" class="datacontainer">
+					<table cellpadding="0" cellspacing="0" border="0" width="100%">
+						<caption>Find shortest path <span>(in terms of distance)</span></caption>
+						<thead>
+							<tr>
+								<th class="textleft city"></th>
+								<th class="textright step">Step</th>
+								<th class="textright distance">Distance (km)</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td class="textleft">Adom</td>
+								<td class="textright">&mdash;</td>
+								<td class="textright">&mdash;</td>
+							</tr>
+							<tr>
+								<td class="textleft">Zagreb</td>
+								<td class="textright">1</td>
+								<td class="textright">24</td>
+							</tr>
+						</tbody>
+						<tfoot>
+							<tr>
+								<th class="textright">Elapsed Time:</th>
+								<th class="textright"><span class="value">[steps]</span></th>
+								<th class="textright"><span class="value">[km]</span></th>
+							</tr>
+						</tfoot>
+					</table>
+				</div>
+			</section>
+		</div>
+		<div class="column boundary romaniatext"></div>
+	</div>
 </body>
 </html>
