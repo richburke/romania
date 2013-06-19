@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="assets/extlibs/jquery.min.js"></script>
+<script src="assets/extlibs/easeljs.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function() {
+    var stage = new createjs.Stage("map");
+    var map = new createjs.Shape();
+    map.graphics.beginFill("white").drawRect(0, 0, 800, 600);
+    circleTest(stage);
+    stage.update();
+});
+function circleTest(stage) {
+	var sh = new createjs.Shape();
+	sh.graphics.ss(1).s('rgba(255, 255, 0, 1)').f('rgb(0, 0, 0, 1)').dc(10, 50, 10);
+	//sh.onClick = function(e) {onClickCity(p)};
+
+	/*
+	App.Map.stage.addChild(new createjs.Shape().graphics.ss(1).s('rgba(255, 255, 0, 1)').f('rgb(0, 0, 0, 1)').dc(10, 50, 10));
+	*/
+
+	stage.addChild(sh);
+}
+</script>
+
+<style>
+body {
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+	background-color: #81BEF7;
+	margin: 20px 0 20px 0;
+	padding: 0;
+}
+canvas {
+	width: 800px;
+	height: 600px;
+}
+table caption {
+	color: white;
+	text-align: left;
+	font-size: 18px;
+	font-weight: bold;
+	margin-bottom: 0;
+	padding-bottom: 0;
+}
+table caption span {
+	color: #EFF2FB;
+	font-weight: normal;
+}
+thead {
+	border-bottom: 1px solid black;
+}
+thead tr > th {
+	padding-bottom: 3px;
+}
+thead tr > th.city {
+	width: 46%;
+}
+thead tr > th.step,
+thead tr > th.distance {
+	width: 27%;
+}
+tbody {
+	background-color: white;
+}
+tbody tr > td {
+	padding-top: 3px;
+	padding-bottom: 3px;
+}
+tfoot {
+	border-top: 1px solid black;
+}
+tfoot tr > th {
+	padding-top: 3px;
+}
+tfoot th .value {
+	color: #EFF2FB;
+}
+th.columnheading {
+	color: black;
+}
+#container {
+	width: 1084px;
+	margin-left: auto;
+	margin-right: auto;
+}
+.column {
+	display: inline-block;
+	vertical-align: top;
+	margin: 0;
+	padding: 0;
+}
+.boundary {
+	width: 138px;
+}
+#content {
+	width: 800px;
+	margin: 0;
+	padding: 0;
+}
+#map {
+	margin-top: 0;
+}
+</style>
+</head>
+<body>
+
+	<div id="container">
+		<div class="column boundary"></div>
+		<div id="content" class="column">
+			<canvas id="map" width="800" height="600"></canvas>
+
+	</div>
+</body>
+</html>
