@@ -1,0 +1,38 @@
+<table cellpadding="0" cellspacing="0" border="0" width="100%">
+	<caption><span class="legendmarker">&nbsp;&nbsp;&nbsp;</span>&nbsp;{{{caption}}}</caption>
+	<thead>
+		<tr>
+			<th class="textleft city"></th>
+			<th class="textright columnheading step">Step</th>
+			<th class="textright columnheading distance">Distance (km)</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr class="from">
+			<td class="textleft">{{fromNodeName}}</td>
+			<td class="textright">&mdash;</td>
+			<td class="textright">&mdash;</td>
+		</tr>
+		{{#steps}}
+        <tr class="data">
+        	<td class="textleft">{{nodeName}}</td>
+            <td class="textright">{{step}}</td>
+            <td class="textright">{{distance}}</td>
+        </tr>
+        {{/steps}}
+		{{#toNodeName}}
+		<tr class="to">
+			<td class="textleft">{{toNodeName}}</td>
+			<td class="textright">{{{toStep}}}</td>
+			<td class="textright">{{{toDistance}}}</td>
+		</tr>
+		{{/toNodeName}}
+	</tbody>
+	<tfoot>
+		<tr>
+			<td class="textright"><!--Elapsed Time:--></th>
+			<td class="textright step"><span class="value"></span></th>
+			<td class="textright distance"><span class="value">{{totalDistance}}</span></th>
+		</tr>
+	</tfoot>
+</table>
