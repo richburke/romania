@@ -7,690 +7,643 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-<script src="assets/extlibs/jquery.min.js"></script>
-<script src="assets/extlibs/underscore.min.js"></script>
-<script src="assets/extlibs/easeljs.min.js"></script>
-<script type="text/javascript">
+	<script src="assets/extlibs/jquery.min.js"></script>
+	<script src="assets/extlibs/underscore.min.js"></script>
+	<script src="assets/extlibs/eventemitter.min.js"></script>
+	<script src="assets/extlibs/easeljs.min.js"></script>
+	<script type="text/javascript">
 
-/**
- * Draw roads
- * Position labels
- * Have labels respond to clicks
- * Set up UI events
-   - click on Start button
-     - clear tables
-     - clear roads
-     - clear city selections
-     - disable Start
-   - click on city or label
-     - first
-       - enable Clear button
-       - add the city to each of the tables
-     - second or subsequent
-       - enable Process button
-       - add the city to each of the tables
-   - click on Clear button
-     - clear all selected cities
-     - clear tables
-     - disable Process button
-     - disable Clear button
-   - click on Process button
-     - disable all buttons
-   - when Process is complete
-     - enable Start button
-   * Create working version (remove CSS?)
+	/**
+	 * Draw roads
+	 * Position labels
+	 * Have labels respond to clicks
+	 * Set up UI events
+	   - click on Start button
+	     - clear tables
+	     - clear roads
+	     - clear city selections
+	     - disable Start
+	   - click on city or label
+	     - first
+	       - enable Clear button
+	       - add the city to each of the tables
+	     - second or subsequent
+	       - enable Process button
+	       - add the city to each of the tables
+	   - click on Clear button
+	     - clear all selected cities
+	     - clear tables
+	     - disable Process button
+	     - disable Clear button
+	   - click on Process button
+	     - disable all buttons
+	   - when Process is complete
+	     - enable Start button
+	   * Create working version (remove CSS?)
 
-   * Write function(s) in JS on client
-     - depth-first
-     - breadth-first
-     - uniform-cost
-     - research Dykstra & A*
-   * Display results in tables
-   * Add notations to HTML
-   * Add km markers
-   * Move processing to WebSockets & Node JS
-   * Move storage to Neo4j
- */
+	   * Write function(s) in JS on client
+	     - depth-first
+	     - breadth-first
+	     - uniform-cost
+	     - research Dykstra & A*
+	   * Display results in tables
+	   * Add notations to HTML
+	   * Add km markers
+	   * Move processing to WebSockets & Node JS
+	   * Move storage to Neo4j
+	 */
 
- /*
-initial state
-actions(state) ->{a1, a2, a3,...}
-result(state, action) ->{new state}
-goal state test(state)  -> boolean
-path cost(s-[a]->s-[a]->s, ...)  ->n
-	step cost(s, a, s1) ->n
+	 /*
+	initial state
+	actions(state) ->{a1, a2, a3,...}
+	result(state, action) ->{new state}
+	goal state test(state)  -> boolean
+	path cost(s-[a]->s-[a]->s, ...)  ->n
+		step cost(s, a, s1) ->n
 
 
-frontier = [];
-explored = [];
-var t;
-frontier.push(initial);
-while frontier is not empty
-	t = frontier.pop();
-	explored.push(t);
-	if t is goal, return path;
-
-	edges = get edges of t
-	for each edge
-		if the node in edge is not in frontier and
-		   the node in edge is not in explored
-		   add the node to frontier;
-	end for each
-end while
- */
-
-$(document).ready(function() {
-    App.Map.stage = new createjs.Stage("map");
-    App.Map.draw();
-
-    btnClear = $('#clear').click(function() {
-    	App.clear();
-    	App.Map.draw();
-    });
-    btnGo = $('#go').click(function() {
-    	App.search();
-    });
-});
-
-function unwindSteps(steps, ptr, path) {
-	if (steps.length <= 0) return path;
-
-	var elem = steps.pop();
-	if (elem[1] == ptr) {
-		path.unshift(ptr);
-		ptr = elem[0];
-	}
-	return unwindSteps(steps, ptr, path);
-}
-
-function expand(node) {
-	// Get all the nodes connected to the supplied node.
-	var a = [];
-	_.each(node.edges, function(elem) {
-		var connectedNodes = elem.nodes;
-
-		if (_.contains(elem.nodes, from)) {
-			$('#results').append(delim+'"'+elem.name+'"');
-			delim = ', ';
-		}
-	});
-}
-
-function searchBreadth(from, to) {
-	var frontier = [];
-	var explored = [];
-	var path = [];
+	frontier = [];
+	explored = [];
 	var t;
-
-	frontier.push(from);
-	path.push([null, t]);
-
-	while (frontier.length > 0) {
-		t = frontier.shift();
-		explored.push(t);
-		if (t == to) return path;
-
-		var nodes = App.Graph.getConnectedNodes(App.Graph.getNode(t));
-		_.each(nodes, function(elem) {
-			if (!_.contains(explored, elem) && !_.contains(frontier, elem)) {
-				frontier.push(elem);
-				path.push([t, elem]);
-			}
-		});
-	}
-}
-function searchDepth(from, to) {
-	var frontier = [];
-	var explored = [];
-	var path = [];
-	var t;
-
-	frontier.push(from);
-	while (frontier.length > 0) {
+	frontier.push(initial);
+	while frontier is not empty
 		t = frontier.pop();
 		explored.push(t);
-		if (t == to) return path;
+		if t is goal, return path;
 
-		var nodes = App.Graph.getConnectedNodes(App.Graph.getNode(t));
-		_.each(nodes, function(elem) {
-			if (!_.contains(explored, elem) && !_.contains(frontier, elem)) {
-				frontier.push(elem);
-				path.push([t, elem]);
-			}
-		});
-	}
-	return null;
-}
-function searchUniformCost(from, to) {
-	var frontier = [];
-	var explored = [];
-	var t, edge;
+		edges = get edges of t
+		for each edge
+			if the node in edge is not in frontier and
+			   the node in edge is not in explored
+			   add the node to frontier;
+		end for each
+	end while
+	 */
 
-	frontier.push({"from":from, "terminus":from, "cost":0, "path":[from]});
+	$(document).ready(function() {
+	    btnClear = $('#clear').click(function() {
+	    	App.clear();
+	    });
+	    btnGo = $('#go').click(function() {
+	    	App.search();
+	    });
 
-	while (frontier.length > 0) {
-		t = frontier.shift();
-		explored.push(t.terminus);
-		if (t.terminus == to) {
-            return t.path;
-        }
-
-		var tmpNodes = App.Graph.getConnectedNodes(App.Graph.getNode(t.terminus));
-		var nodes = [];
-		_.each(tmpNodes, function(elem) {
-			// Only include as a node to check if we haven't already checked it.
-			if (!_.contains(explored, elem)) {
-				nodes.push(elem);
-			}
-		});
-
-		var a = [];
-		_.each(nodes, function(elem) {
-			// If the node has already been added to the frontier, don't add it again.
-			if (inUCSFrontier(elem, frontier)) return;
-
-			var edge = App.Graph.getEdgeConnecting(t.terminus, elem);
-			var path = t.path.slice(0);
-			path.push(elem);
-
-			frontier.push({"from":from, "terminus":elem, "cost":t.cost+edge.distance, "path":path});
-		});
-
-		frontier = _.sortBy(frontier, "cost");
-	}
-
-	return null;
-}
-function inUCSFrontier(elem, a) {
-	for (var i=0; i < a.length; i++) {
-		if (elem == a[i].terminus)
-			return true;
-	}
-	return false;
-}
-function orderByDistance(options) {
-	return _.sortBy(options, function(elem){
-		return elem.distance;
-	});
-}
-
-function drawCities(stage) {
-	_.each(App.Graph.nodes, function(elem) {
-			drawCityMarker(stage, elem);
-			drawCityLabel(stage, elem);
-		});
-}
-function drawCityMarker(stage, p, status) {
-	var city = new createjs.Shape();
-	var color = status == 'selected' ? 'black' : 
-			status == 'filled' ? '#819FF7' : 
-			'white';
-
-	city.graphics.ss(2).s('#819FF7').f(color).dc(p.xCenter, p.yCenter, 5);
-	city.onClick = function(e) {onClickCity(p)};
-
-	stage.addChild(city);
-}
-function drawRoads(stage) {
-	var sh;
-	var color = '#819FF7';
-
-	var edge, node1, node2;
-	_.each(App.Graph.edges, function(elem) {
-			n1 = App.Graph.getNode(elem.nodes[0]);
-			n2 = App.Graph.getNode(elem.nodes[1]);
-
-			sh = new createjs.Shape();
-			sh.graphics.mt(n1.xCenter, n1.yCenter).ss(2).s(color).lt(n2.xCenter, n2.yCenter);
-			App.Map.stage.addChild(sh);
-
-			drawDistanceLabel(stage, elem);
-		});
-}
-function highlightRoad(stage, n1, n2, roadColor) {
-	var sh = new createjs.Shape();
-
-	sh.graphics.mt(n1.xCenter, n1.yCenter).ss(10).s(roadColor).lt(n2.xCenter, n2.yCenter);
-	stage.addChild(sh);
-}
-function drawPath(stage, path, roadColor) {
-	var n1, n2;
-	n1 = App.Graph.getNode(path[0]);
-
-	_.each(path, function(elem, indx) {
-			if (indx == 0) return;
-
-			n2 = App.Graph.getNode(elem);
-			highlightRoad(stage, n1, n2, roadColor);
-			n1 = n2;
-		});
-
-	_.each(path, function(elem, indx) {
-			drawCityMarker(stage, App.Graph.getNode(elem), (indx==0 || indx>=path.length-1) ? 'selected' : 'filled');
-		});
-}
-function drawCityLabel(stage, p) {
-	var text = new createjs.Text(formatText(convertHexText(p.display), 'map'), "14px Arial", "#333");
-	text.x = p.xLabel;
-	text.y = p.yLabel;
-	text.textBaseline = "alphabetic";
-
-	text.onClick = function(e) {onClickCityLabel(p)};
-
-	stage.addChild(text);
-}
-function onClickCity(node) {
-	App.clickNode(node);
-}
-function onClickCityLabel(node) {
-	App.clickNode(node);
-}
-function drawDistanceLabel(stage, p) {
-	var text = new createjs.Text(p.distance, "12px Arial", "#ccc");
-	text.x = p.xLabel;
-	text.y = p.yLabel;
-	text.textBaseline = "alphabetic";
-	stage.addChild(text);
-}
-function convertHexText(s) {
-	/*
-	\\x15F; hexCedilla (s?)
-	\\xE2; hexACircumflex (a^)
-	\\x103; hexABreve (a))
-	*/
-	s = s.replace(/\[hexCedilla\]/gi, String.fromCharCode(parseInt("\\x15F".substr(2), 16)));
-	s = s.replace(/\[hexABreve\]/gi, String.fromCharCode(parseInt("\\x103".substr(2), 16)));
-	s = s.replace(/\[hexACircumflex\]/gi, String.fromCharCode(parseInt("\\xE2".substr(2), 16)));
-	return s;
-}
-function formatText(s, context) {
-	return s.replace(/\[BR\]/gi, context=='map' ? '\n' : ' ');
-}
-
-
-var App = {};
-App.status = "";
-App.listeners = [];
-App.to = "";
-App.from = "";
-App.paths = {
-	"breadth":{},
-	"depth":{},
-	"lowestCost":{}
-}
-App.clear = function() {
-	this.to = this.from = "";
-	this.Map.clear();
-	this.Map.draw();
-
-	$('btnClear').attr("disabled", true);
-	this.broadcast('clear');
-
-	this.setStatus("");
-};
-App.clickNode = function(node) {
-	if (this.from == "") {
-		this.from = node.name;
-		drawCityMarker(App.Map.stage, node, 'selected');
-		this.Map.stage.update();
-		this.broadcast('selectedFrom');
-		return;
-	}
-	if (this.to == "") {
-		this.to = node.name;
-		drawCityMarker(App.Map.stage, node, 'selected');
-		this.Map.stage.update();
-		this.broadcast('selectedTo');
-		return;
-	}
-};
-function convertMilliSecsToTime(ms) {
-	var x = ms/1000;
-	var secs = x % 60;
-	x /= 60;
-	var mins = x % 60;
-	var mils = ms - (secs*1000);
-	console.log(x+'->'+secs+':'+mins+':'+mils)
-}
-App.search = function() {
-	var from = App.from;
-	var to = App.to;
-
-	var aBreadth = searchBreadth(from, to);
-	var pathBreadth = [];
-	unwindSteps(aBreadth, to, pathBreadth);
-	pathBreadth.unshift(from);
-	App.paths.breadth = pathBreadth;
-	drawPath(App.Map.stage, App.paths.breadth, App.Map.colors.highlightRoadBreadth);
-
-	var aDepth = searchDepth(from, to);
-	var pathDepth = [];
-	unwindSteps(aDepth, to, pathDepth);
-	pathDepth.unshift(from);
-	App.paths.depth = pathDepth;
-	drawPath(App.Map.stage, App.paths.depth, App.Map.colors.highlightRoadDepth);
-
-	var aUCS = searchUniformCost(from, to);
-
-	console.log(aUCS);
-
-	//unwindSteps(aUCS, to, pathUCS);
-	//pathUCS.unshift(from);
-	//console.log('ucs '+pathUCS);
-	App.paths.lowestCost = aUCS;
-	drawPath(App.Map.stage, App.paths.lowestCost, App.Map.colors.highlightRoadLowestCost);
-
-	App.Map.stage.update();
-	this.broadcast('processingDone');
-};
-App.setStatus = function(status) {
-	this.status = status;
-	this.broadcast(status);
-}
-App.broadcast = function(evnt) {
-	_.each(this.listeners, function(elem) {
-		elem.notify(evnt);
-	});
-}
-
-App.Map = {
-	"stage": null,
-	"colors": {
-		"highlightRoadDepth": "rgba(9, 41, 220, .3)",
-		"highlightRoadBreadth": "rgba(255, 255, 0, .4)",
-		"highlightRoadLowestCost": "rgba(255, 0, 255, .4)"
-	}
-};
-App.Map.clear = function() {
-	this.stage.clear();
-};
-App.Map.draw = function() {
-    var map = new createjs.Shape();
-    map.graphics.beginFill("white").drawRect(0, 0, 800, 600);
-
-	map.onClick = function(e) {alert(e.stageX+', '+e.stageY)};
-    this.stage.addChild(map);
-    this.stage.update();
-
-    drawRoads(this.stage);
-    this.stage.update();
-    drawCities(this.stage);
-    this.stage.update();
-}
-
-App.Graph = {};
-App.Graph.getNode = function(n) {
-	var c = App.Graph.nodes.length;
-	for (var i=0; i < c; i++) {
-		if (n.toLowerCase() == App.Graph.nodes[i].name) return App.Graph.nodes[i];
-	}
-	return null;
-}
-App.Graph.getEdge = function(n) {
-	var c = App.Graph.edges.length;
-	for (var i=0; i < c; i++) {
-		if (n.toLowerCase() == App.Graph.edges[i].name) return App.Graph.edges[i];
-	}
-	return null;
-}
-App.Graph.getEdgeConnecting = function(n1, n2) {
-	var edge;
-	var c = App.Graph.edges.length;
-	for (var i=0; i < c; i++) {
-		edge = App.Graph.edges[i];
-		if (_.contains(edge.nodes, n1) &&
-			_.contains(edge.nodes, n2))
-			return edge;
-	}
-	return null;
-}
-App.Graph.getConnectedNode = function(edge, startingPoint) {
-	var a = _.without(edge.nodes, startingPoint);
-	return (a.length > 0) ? a[0] : null; 
-}
-App.Graph.getConnectedNodes = function(node) {
-	var connectedNodes = [];
-
-	_.each(node.edges, function(elem) {
-		var edge = App.Graph.getEdge(elem);
-		_.each(edge.nodes, function(n) {
-			if(n.toLowerCase() == node.name.toLowerCase())
-				return;
-			if(!_.contains(connectedNodes, n))
-				connectedNodes.push(n);
-		});
+	    App.init();
 	});
 
-	return connectedNodes;
-}
-App.Graph.convertPathToNodeList = function(path) {
-	var nodeList = [];
-	console.log(path);
-	_.each(path, function(elem) {
-		nodeList.push(App.Graph.getNode(elem));
-	});
-	return nodeList;
-}
+	var App = (function($) {
+		var Base = function() {
+	        var setProp = function(k, v) {props[k] = v;};
+	        this.pullFromPropArray = function(p, k, def) {
+	            return ('undefined' !== typeof p && 'undefined' !== typeof p[k]) ? p[k] : def;
+	        };
+	        this.getProps = function() {return props;};
 
-var Panel = function(id, ref) {
-    $.extend(this, {
-        panelId: id !== null ? id : '', 
-        elemReference: ref !== null ? ref : '',
-        render: function() {},
-        applyFrom: function(node) {
-        	var ref = '#'+this.elemReference+'>table tbody tr.from td:eq';
-        	$(ref+'('+0+')').text(node == null ? '' : formatText(convertHexText(node.display)));
-        	$(ref+'('+1+')').html('&mdash;');
-        	$(ref+'('+2+')').html('&mdash;');
-        },
-        applyTo: function(node) {
-        	var ref = '#'+this.elemReference+'>table tbody tr.to td:eq';
-        	$(ref+'('+0+')').text(node == null ? '' : formatText(convertHexText(node.display)));
-        	$(ref+'('+1+')').html('&mdash;');
-        	$(ref+'('+2+')').html('&mdash;');
-        },
-        update: function(data, panelRef) {
-        	panelRef = panelRef == null ? this.elemReference : panelRef;
-        	var ref;
+/*
+	        var props = {
+	            id:this.pullFromPropArray(p, 'id', null)
+	        };*/
+	    };
 
-        	if (data == null) {
-        		ref = '#'+panelRef+'>table tbody tr.data';
-        		$(ref).each(function() {this.delete();});
-        		return;
-        	} else {
-        		var s = '';
-                        var edge;
-                        var totalDistance = 0;
-        		_.each(data, function(elem, indx) {
-        			// First and last are handled during selection of points.
-        			if (indx == 0) return;
-                                
-                                edge = App.Graph.getEdgeConnecting(elem.name, data[indx-1].name);
-                                totalDistance += edge.distance;
-                                                                
-        			if (indx >= data.length - 1) {
-                                    ref = '#'+panelRef+'>table tbody tr.to td:eq';
-                                    $(ref+'('+1+')').text(data.length-1);
-                                    $(ref+'('+2+')').text(edge.distance);
-                                    return;
-                                }
-                                
-                                s += '<tr class="data">';
-                                s += '<td class="textleft">'+formatText(convertHexText(elem.display))+'</td>';
-                                s += '<td class="textright">'+indx+'</td>';
-                                s += '<td class="textright">'+edge.distance+'</td>';
-                                s += '</tr>';
-        		});
+		var App = new function(p) {
+       		$.extend(this, new Base(p));
+       		$.extend(this, new EventEmitter());
+
+			$.extend(this, {
+				status: "", from: "", to: "",
+				paths: {"breadth":{}, "depth":{}, "lowestCost":{}},
+				panels: {"breadth":null, "depth":null, "lowestCost":{}},
+				listeners: [], 
+				init: function() {
+					App.panels.breadth = new Panel('breadth', 'panel-breadth', 'breadth');
+					App.panels.breadth.init();
+					App.listeners.push(App.panels.breadth);
+
+					App.panels.depth = new Panel('depth', 'panel-depth', 'depth');
+					App.panels.depth.init();
+					App.listeners.push(App.panels.depth);
+
+					App.panels.lowestCost = new Panel('lowestCost', 'panel-lowestCost', 'lowestCost');
+					App.panels.lowestCost.init();
+					App.listeners.push(App.panels.lowestCost);
+
+					App.Canvas.init();
+
+					var self = this;
+					App.on('nodeselected', function(ep) {
+						if (self.from == "") {
+							self.onFromNodeSelected(ep);
+							return;
+						}
+						if (self.to == "") {
+							self.onToNodeSelected(ep);
+							return;
+						}
+					});
+
+					App.emit('ready', {"msg":"App is ready"});
+	        	},
+				clear: function() {
+					this.to = this.from = "";
+
+					$('btnClear').attr("disabled", true);
+					this.emit('clear');
+
+					this.setStatus("");
+				},
+				onFromNodeSelected: function(p) {
+					this.from = p.node.name;
+					this.emit('selectedfrom', p);
+				},
+				onToNodeSelected: function(p) {
+					this.to = p.node.name;
+					this.emit('selectedto', p);
+				},
+				search: function() {
+					var from = App.from;
+					var to = App.to;
+					var path;
+
+					path = this.setSearchPath('breadth', (new BreadthSearch()).exec(from, to));
+					this.emit('searchdone', {"path": path, "color": App.Canvas.colors.highlightRoadBreadth});
+
+					path = this.setSearchPath('depth', new DepthSearch().exec(from, to));
+					this.emit('searchdone', {"path": path, "color": App.Canvas.colors.highlightRoadDepth});
+
+					path = this.setSearchPath('lowestCost', new UniformCostSearch().search(from, to));
+					this.emit('searchdone', {"path": path, "color": App.Canvas.colors.highlightRoadLowestCost});
+
+					this.emit('processingdone');
+				},
+				setStatus: function(status) {
+					this.status = status;
+					this.emit('changestatus', {"status":status});
+				},
+				getSearchPath: function(searchId) {
+					return this.paths[searchId];
+				},
+				setSearchPath: function(searchId, path) {
+					return this.paths[searchId] = path;
+				}
+			});
+		};
+
+		/**
+		 * Make it so the Canvas object is not a singleton.   Rather, you get
+		 * it be calling App.getCanvas('name').draw();
+		 *
+		 * Each Canvas is supplied a helper that knows how to draw stuff that
+		 * pertains to it.
+		 */
+		var Canvas = function() {
+			$.extend(this, {
+				"stage": null,
+				"colors": {
+					"highlightRoadDepth": "rgba(9, 41, 220, .3)",
+					"highlightRoadBreadth": "rgba(255, 255, 0, .4)",
+					"highlightRoadLowestCost": "rgba(255, 0, 255, .4)"
+				},
+				init: function() {
+				    this.stage = new createjs.Stage("map");
+				    this.draw();
+
+					var self = this;
+					App.on('clear', function(ep) {
+						self.clear();
+						self.draw();
+					});
+					App.on('searchdone', function(ep) {
+						self.drawPath(ep.path, ep.color);
+					});
+					App.on('processingdone', function(ep) {
+						self.stage.update();
+					});
+					App.on('selectedfrom', function(ep) {
+						self.drawCityMarker(ep.node, 'selected');
+						self.stage.update();
+					});
+					App.on('selectedto', function(ep) {
+						self.drawCityMarker(ep.node, 'selected');
+						self.stage.update();
+					});			
+				},
+				clear: function() {
+					this.stage.clear();
+				},
+				draw: function() {
+				    var map = new createjs.Shape();
+				    map.graphics.beginFill("white").drawRect(0, 0, 800, 600);
+
+					map.onClick = function(e) {alert(e.stageX+', '+e.stageY)};
+				    this.stage.addChild(map);
+				    this.stage.update();
+
+				    drawRoads(this.stage);
+				    this.stage.update();
+				    drawCities(this.stage);
+				    this.stage.update();
+				},
+				drawPath: function(path, roadColor) {
+					var self = this;
+					var n1, n2;
+					n1 = App.Graph.getNode(path[0]);
+
+					_.each(path, function(elem, indx) {
+							if (indx == 0) return;
+
+							n2 = App.Graph.getNode(elem);
+							highlightRoad(self.stage, n1, n2, roadColor);
+							n1 = n2;
+						});
+
+					_.each(path, function(elem, indx) {
+							App.Canvas.drawCityMarker(App.Graph.getNode(elem), (indx==0 || indx>=path.length-1) ? 'selected' : 'filled');
+						});
+				},
+				drawCityMarker: function (p, status) {
+					var city = new createjs.Shape();
+					var color = status == 'selected' ? 'black' : 
+							status == 'filled' ? '#819FF7' : 
+							'white';
+
+					city.graphics.ss(2).s('#819FF7').f(color).dc(p.xCenter, p.yCenter, 5);
+					city.onClick = function(e) {onClickCity(p)};
+
+					this.stage.addChild(city);
+				}
+			});
+		};
+
+		var Graph = function() {
+			$.extend(this, {
+				getNode: function(n) {
+					var c = App.Graph.nodes.length;
+					for (var i=0; i < c; i++) {
+						if (n.toLowerCase() == App.Graph.nodes[i].name) return App.Graph.nodes[i];
+					}
+					return null;
+				},
+				getEdge: function(n) {
+					var c = App.Graph.edges.length;
+					for (var i=0; i < c; i++) {
+						if (n.toLowerCase() == App.Graph.edges[i].name) return App.Graph.edges[i];
+					}
+					return null;
+				},
+				getEdgeConnecting: function(n1, n2) {
+					var edge;
+					var c = App.Graph.edges.length;
+					for (var i=0; i < c; i++) {
+						edge = App.Graph.edges[i];
+						if (_.contains(edge.nodes, n1) &&
+							_.contains(edge.nodes, n2))
+							return edge;
+					}
+					return null;
+				},
+				getConnectedNode: function(edge, startingPoint) {
+					var a = _.without(edge.nodes, startingPoint);
+					return (a.length > 0) ? a[0] : null; 
+				},
+				getConnectedNodes: function(node) {
+					var connectedNodes = [];
+
+					_.each(node.edges, function(elem) {
+						var edge = App.Graph.getEdge(elem);
+						_.each(edge.nodes, function(n) {
+							if(n.toLowerCase() == node.name.toLowerCase())
+								return;
+							if(!_.contains(connectedNodes, n))
+								connectedNodes.push(n);
+						});
+					});
+
+					return connectedNodes;
+				},
+				convertPathToNodeList: function(path) {
+					var nodeList = [];
+					console.log(path);
+					_.each(path, function(elem) {
+						nodeList.push(App.Graph.getNode(elem));
+					});
+					return nodeList;
+				}
+			});
+		};
+
+		var Search = function() {
+       		$.extend(this, new Base(null));
+       		$.extend(this, {
+       			search: function() { return null; },
+				unwind: function(steps, ptr, path) {
+					if (steps.length <= 0) return path;
+
+					var elem = steps.pop();
+					if (elem[1] == ptr) {
+						path.unshift(ptr);
+						ptr = elem[0];
+					}
+					return this.unwind(steps, ptr, path);
+				},
+				exec: function(from, to) {
+					var a = this.search(from, to);
+					var path = [];
+					this.unwind(a, to, path);
+					path.unshift(from);
+					return path;
+				}
+       		});
+       	};
+
+		var DepthSearch = function() {
+       		$.extend(this, new Search(null));
+       		$.extend(this, {
+				search: function(from, to) {
+					var frontier = [];
+					var explored = [];
+					var path = [];
+					var t;
+
+					frontier.push(from);
+					while (frontier.length > 0) {
+						t = frontier.pop();
+						explored.push(t);
+						if (t == to) return path;
+
+						var nodes = App.Graph.getConnectedNodes(App.Graph.getNode(t));
+						_.each(nodes, function(elem) {
+							if (!_.contains(explored, elem) && !_.contains(frontier, elem)) {
+								frontier.push(elem);
+								path.push([t, elem]);
+							}
+						});
+					}
+					return null;
+				}
+       		});
+       	};
+		var BreadthSearch = function() {
+       		$.extend(this, new Search(null));
+       		$.extend(this, {
+				search: function(from, to) {
+					var frontier = [];
+					var explored = [];
+					var path = [];
+					var t;
+
+					frontier.push(from);
+					path.push([null, t]);
+
+					while (frontier.length > 0) {
+						t = frontier.shift();
+						explored.push(t);
+						if (t == to) return path;
+
+						var nodes = App.Graph.getConnectedNodes(App.Graph.getNode(t));
+						_.each(nodes, function(elem) {
+							if (!_.contains(explored, elem) && !_.contains(frontier, elem)) {
+								frontier.push(elem);
+								path.push([t, elem]);
+							}
+						});
+					}
+				}
+       		});
+       	};
+		var UniformCostSearch = function() {
+       		$.extend(this, new Search(null));
+       		$.extend(this, {
+       			search: function(from, to) {
+					var self = this;
+					var frontier = [];
+					var explored = [];
+					var t, edge;
+
+					frontier.push({"from":from, "terminus":from, "cost":0, "path":[from]});
+
+					while (frontier.length > 0) {
+						t = frontier.shift();
+						explored.push(t.terminus);
+						if (t.terminus == to) {
+				            return t.path;
+				        }
+
+						var tmpNodes = App.Graph.getConnectedNodes(App.Graph.getNode(t.terminus));
+						var nodes = [];
+						_.each(tmpNodes, function(elem) {
+							// Only include as a node to check if we haven't already checked it.
+							if (!_.contains(explored, elem)) {
+								nodes.push(elem);
+							}
+						});
+
+						var a = [];
+						_.each(nodes, function(elem) {
+							// If the node has already been added to the frontier, don't add it again.
+							if (self.inFrontier(elem, frontier)) return;
+
+							var edge = App.Graph.getEdgeConnecting(t.terminus, elem);
+							var path = t.path.slice(0);
+							path.push(elem);
+
+							frontier.push({"from":from, "terminus":elem, "cost":t.cost+edge.distance, "path":path});
+						});
+
+						frontier = _.sortBy(frontier, "cost");
+					}
+
+					return null;
+				},
+				inFrontier: function(elem, a) {
+					for (var i=0; i < a.length; i++) {
+						if (elem == a[i].terminus)
+							return true;
+					}
+					return false;
+				},
+				orderByDistance: function(options) {
+					return _.sortBy(options, function(elem){
+						return elem.distance;
+					});
+				}
+       		});
+       	};
+
+		var Panel = function(id, ref, search) {
+			var searchId = search;
+
+		    $.extend(this, {
+		        panelId: id !== null ? id : '', 
+		        elemReference: ref !== null ? ref : '',
+		        init: function() {
+					var self = this;
+					App.on('selectedfrom', function(ep) {self.applyFrom(App.Graph.getNode(App.from));});
+					App.on('selectedto', function(ep) {self.applyTo(App.Graph.getNode(App.to));});
+					App.on('clear', function(ep) {self.clear();});
+					App.on('processingdone', function() {
+	        			self.update(App.Graph.convertPathToNodeList(App.getSearchPath(self.getSearchId())), self.elemReference);
+					});
+		        },
+		        render: function() {},
+		        applyFrom: function(node) {
+		        	var ref = '#'+this.elemReference+'>table tbody tr.from td:eq';
+		        	$(ref+'('+0+')').text(node == null ? '' : formatText(convertHexText(node.display)));
+		        	$(ref+'('+1+')').html('&mdash;');
+		        	$(ref+'('+2+')').html('&mdash;');
+		        },
+		        applyTo: function(node) {
+		        	var ref = '#'+this.elemReference+'>table tbody tr.to td:eq';
+		        	$(ref+'('+0+')').text(node == null ? '' : formatText(convertHexText(node.display)));
+		        	$(ref+'('+1+')').html('&mdash;');
+		        	$(ref+'('+2+')').html('&mdash;');
+		        },
+		        update: function(data, panelRef) {
+		        	panelRef = panelRef == null ? this.elemReference : panelRef;
+		        	var ref;
+
+		        	if (data == null) {
+		        		ref = '#'+panelRef+'>table tbody tr.data';
+		        		$(ref).each(function() {this.remove();});
+		        		return;
+		        	}
+
+	        		var s = '';
+                    var edge;
+                    var totalDistance = 0;
+	        		_.each(data, function(elem, indx) {
+	        			// First and last are handled during selection of points.
+	        			if (indx == 0) return;
+	                                
+                        edge = App.Graph.getEdgeConnecting(elem.name, data[indx-1].name);
+                        totalDistance += edge.distance;
+	                                                                
+	        			if (indx >= data.length - 1) {
+                            ref = '#'+panelRef+'>table tbody tr.to td:eq';
+                            $(ref+'('+1+')').text(data.length-1);
+                            $(ref+'('+2+')').text(edge.distance);
+                            return;
+                        }
                         
-                        ref = '#'+panelRef+'>table tbody tr.from';
-        		$(ref).after(s);
-                        
-        		ref = '#'+panelRef+'>table tfoot tr th:eq';
-                        $(ref+'('+2+')').text(totalDistance);
-        	}
-        },
-        clear: function() {
-        	this.applyFrom(null);
-        	this.applyTo(null);
-        	this.update(null);
-        },
-        notify: function(evnt) {
-        	switch(evnt.toLowerCase()) {
-        		case 'selectedfrom':
-        			this.applyFrom(App.Graph.getNode(App.from));
-        			break;
-        		case 'selectedto':
-        			this.applyTo(App.Graph.getNode(App.to));
-        			break;
-        		case 'clear':
-        			this.clear();
-        			break;
-        		case 'processingdone':
-        			var path;
-        			switch(this.panelId) {
-        				case 'breadth': path = App.paths.breadth; break;
-        				case 'depth': path = App.paths.depth; break;
-        				case 'lowestCost': path = App.paths.lowestCost; break;
-        			}
-        			this.update(App.Graph.convertPathToNodeList(path), this.elemReference);
-        			break;
-        	}
-        }
-    });
-};
+                        s += '<tr class="data">';
+                        s += '<td class="textleft">'+formatText(convertHexText(elem.display))+'</td>';
+                        s += '<td class="textright">'+indx+'</td>';
+                        s += '<td class="textright">'+edge.distance+'</td>';
+                        s += '</tr>';
+	        		});
+	                        
+	                ref = '#'+panelRef+'>table tbody tr.from';
+	        		$(ref).after(s);
+	                        
+	        		ref = '#'+panelRef+'>table tfoot td.distance span';
+	                $(ref).text(totalDistance);
+		        },
+		        clear: function() {
+		        	this.applyFrom(null);
+		        	this.applyTo(null);
 
-App.Panels = {};
-App.Panels.breadth = new Panel('breadth', 'panel-breadth');
-App.listeners.push(App.Panels.breadth);
-App.Panels.depth = new Panel('depth', 'panel-depth');
-App.listeners.push(App.Panels.depth);
-App.Panels.lowestCost = new Panel('lowestCost', 'panel-lowestCost');
-App.listeners.push(App.Panels.lowestCost);
+		        	this.resetDataRows();
+		        	this.resetFootRow();
+		        },
+		        resetDataRows: function() {
+					var ref = '#'+this.elemReference +'>table tbody tr.data';
+		        	$(ref).each(function() {this.remove();});
+		        },
+		        resetFootRow: function() {
+					var ref = '#'+this.elemReference +'>table tfoot td.distance span';
+		        	$(ref).text('');
+		        },
+		        getSearchId: function() {
+		        	return searchId;
+		        }
+		    });
+		};
+
+	    $.extend(App, {
+	        'Canvas': new Canvas(),
+	        'Graph': new Graph()
+	    });
+
+	    return App;
+	})(jQuery);
+
+
+	function drawCities(stage) {
+		_.each(App.Graph.nodes, function(elem) {
+				App.Canvas.drawCityMarker(elem);
+				drawCityLabel(stage, elem);
+			});
+	}
+	function drawRoads(stage) {
+		var sh;
+		var color = '#819FF7';
+
+		var edge, node1, node2;
+		_.each(App.Graph.edges, function(elem) {
+				n1 = App.Graph.getNode(elem.nodes[0]);
+				n2 = App.Graph.getNode(elem.nodes[1]);
+
+				sh = new createjs.Shape();
+				sh.graphics.mt(n1.xCenter, n1.yCenter).ss(2).s(color).lt(n2.xCenter, n2.yCenter);
+				App.Canvas.stage.addChild(sh);
+
+				drawDistanceLabel(stage, elem);
+			});
+	}
+	function highlightRoad(stage, n1, n2, roadColor) {
+		var sh = new createjs.Shape();
+
+		sh.graphics.mt(n1.xCenter, n1.yCenter).ss(10).s(roadColor).lt(n2.xCenter, n2.yCenter);
+		stage.addChild(sh);
+	}
+	function drawCityLabel(stage, p) {
+		var text = new createjs.Text(formatText(convertHexText(p.display), 'map'), "14px Arial", "#333");
+		text.x = p.xLabel;
+		text.y = p.yLabel;
+		text.textBaseline = "alphabetic";
+
+		text.onClick = function(e) {onClickCityLabel(p)};
+
+		stage.addChild(text);
+	}
+	function onClickCity(node) {
+		App.emit('nodeselected', {"node":node});
+	}
+	function onClickCityLabel(node) {
+		App.emit('nodeselected', {"node":node});
+	}
+	function drawDistanceLabel(stage, p) {
+		var text = new createjs.Text(p.distance, "12px Arial", "#ccc");
+		text.x = p.xLabel;
+		text.y = p.yLabel;
+		text.textBaseline = "alphabetic";
+		stage.addChild(text);
+	}
+	function convertHexText(s) {
+		/*
+		\\x15F; hexCedilla (s?)
+		\\xE2; hexACircumflex (a^)
+		\\x103; hexABreve (a))
+		*/
+		s = s.replace(/\[hexCedilla\]/gi, String.fromCharCode(parseInt("\\x15F".substr(2), 16)));
+		s = s.replace(/\[hexABreve\]/gi, String.fromCharCode(parseInt("\\x103".substr(2), 16)));
+		s = s.replace(/\[hexACircumflex\]/gi, String.fromCharCode(parseInt("\\xE2".substr(2), 16)));
+		return s;
+	}
+	function formatText(s, context) {
+		return s.replace(/\[BR\]/gi, context=='map' ? '\n' : ' ');
+	}
+
+
+	function convertMilliSecsToTime(ms) {
+		var x = ms/1000;
+		var secs = x % 60;
+		x /= 60;
+		var mins = x % 60;
+		var mils = ms - (secs*1000);
+		console.log(x+'->'+secs+':'+mins+':'+mils)
+	}
 </script>
-<script src="assets/js/app-data.js"></script>
-
-<style>
-body {
-	font-family: Arial, sans-serif;
-	font-size: 14px;
-	background-color: #81BEF7;
-	margin: 20px 0 20px 0;
-	padding: 0;
-}
-canvas {
-	width: 800px;
-	height: 600px;
-}
-table caption {
-	color: white;
-	text-align: left;
-	font-size: 18px;
-	font-weight: bold;
-	margin-bottom: 0;
-	padding-bottom: 0;
-}
-table caption span {
-	color: #EFF2FB;
-	font-weight: normal;
-}
-thead {
-	border-bottom: 1px solid black;
-}
-thead tr > th {
-	padding-bottom: 3px;
-}
-thead tr > th.city {
-	width: 46%;
-}
-thead tr > th.step,
-thead tr > th.distance {
-	width: 27%;
-}
-tbody {
-	background-color: white;
-}
-tbody tr > td {
-	padding-top: 3px;
-	padding-bottom: 3px;
-}
-tfoot {
-	border-top: 1px solid black;
-}
-tfoot tr > th {
-	padding-top: 3px;
-}
-tfoot th .value {
-	color: #EFF2FB;
-}
-th.columnheading {
-	color: black;
-}
-#container {
-	width: 1084px;
-	margin-left: auto;
-	margin-right: auto;
-}
-.column {
-	display: inline-block;
-	vertical-align: top;
-	margin: 0;
-	padding: 0;
-}
-.boundary {
-	width: 138px;
-}
-.boundary.romaniatext {
-	background: transparent url('assets/images/romania.png') no-repeat right top;
-	min-height: 600px;
-}
-#content {
-	width: 800px;
-	margin: 0;
-	padding: 0;
-}
-#map {
-	margin-top: 0;
-}
-#controls {
-	width: 130px;
-	margin-left: auto;
-	margin-right: auto;
-}
-#controls button {
-	margin-left: 5px;
-	margin-right: 5px;
-	min-width: 50px;
-}
-#datatables {
-	width: 600px;
-	margin-left: auto;
-	margin-right: auto;
-}
-.datacontainer {
-	margin-top: 30px;
-	padding-top: 10px;
-}
-#buttons {
-	margin-left: auto;
-	margin-right: auto;
-}
-.textleft { text-align: left; padding-left: 3px }
-.textright { text-align: right; padding-right: 3px;}
-
-.legendmarker {
-	width: 40px;
-	height:20px;
-}
-#panel-breadth .legendmarker {
-	background-color: #FFFF00;
-}
-#panel-depth .legendmarker {
-	background-color: #0929DC;
-}
-#panel-lowestCost .legendmarker {
-	background-color: #FF00FF;
-}
-</style>
+<link rel="stylesheet" type="text/css" href="assets/styles/main.css">
 </head>
 <body>
 
@@ -729,9 +682,9 @@ th.columnheading {
 						</tbody>
 						<tfoot>
 							<tr>
-								<th class="textright"><!--Elapsed Time:--></th>
-								<th class="textright"><span class="value"></span></th>
-								<th class="textright"><span class="value"></span></th>
+								<td class="textright"><!--Elapsed Time:--></th>
+								<td class="textright step"><span class="value"></span></th>
+								<td class="textright distance"><span class="value"></span></th>
 							</tr>
 						</tfoot>
 					</table>
@@ -761,9 +714,9 @@ th.columnheading {
 						</tbody>
 						<tfoot>
 							<tr>
-								<th class="textright"><!--Elapsed Time:--></th>
-								<th class="textright"><span class="value"></span></th>
-								<th class="textright"><span class="value"></span></th>
+								<td class="textright"><!--Elapsed Time:--></th>
+								<td class="textright step"><span class="value"></span></th>
+								<td class="textright distance"><span class="value"></span></th>
 							</tr>
 						</tfoot>
 					</table>
@@ -793,9 +746,9 @@ th.columnheading {
 						</tbody>
 						<tfoot>
 							<tr>
-								<th class="textright"><!--Elapsed Time:--></th>
-								<th class="textright"><span class="value"></span></th>
-								<th class="textright"><span class="value"></span></th>
+								<td class="textright"><!--Elapsed Time:--></th>
+								<td class="textright step"><span class="value"></span></th>
+								<td class="textright distance"><span class="value"></span></th>
 							</tr>
 						</tfoot>
 					</table>
@@ -804,5 +757,7 @@ th.columnheading {
 		</div>
 		<div class="column boundary romaniatext"></div>
 	</div>
+
+<script src="assets/js/app-data.js"></script>
 </body>
 </html>

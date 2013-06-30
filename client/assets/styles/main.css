@@ -1,0 +1,120 @@
+body {
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+	background-color: #81BEF7;
+	margin: 20px 0 20px 0;
+	padding: 0;
+}
+canvas {
+	width: 800px;
+	height: 600px;
+}
+table caption {
+	color: white;
+	text-align: left;
+	font-size: 18px;
+	font-weight: bold;
+	margin-bottom: 0;
+	padding-bottom: 0;
+}
+table caption span {
+	color: #EFF2FB;
+	font-weight: normal;
+}
+thead {
+	border-bottom: 1px solid black;
+}
+thead tr > th {
+	padding-bottom: 3px;
+}
+thead tr > th.city {
+	width: 46%;
+}
+thead tr > th.step,
+thead tr > th.distance {
+	width: 27%;
+}
+tbody {
+	background-color: white;
+}
+tbody tr > td {
+	padding-top: 3px;
+	padding-bottom: 3px;
+}
+tfoot {
+	border-top: 1px solid black;
+}
+tfoot tr > td {
+	padding-top: 3px;
+}
+tfoot td .value {
+	color: #EFF2FB;
+}
+th.columnheading {
+	color: black;
+}
+#container {
+	width: 1084px;
+	margin-left: auto;
+	margin-right: auto;
+}
+.column {
+	display: inline-block;
+	vertical-align: top;
+	margin: 0;
+	padding: 0;
+}
+.boundary {
+	width: 138px;
+}
+.boundary.romaniatext {
+	background: transparent url('../images/romania.png') no-repeat right top;
+	min-height: 600px;
+}
+#content {
+	width: 800px;
+	margin: 0;
+	padding: 0;
+}
+#map {
+	margin-top: 0;
+}
+#controls {
+	width: 130px;
+	margin-left: auto;
+	margin-right: auto;
+}
+#controls button {
+	margin-left: 5px;
+	margin-right: 5px;
+	min-width: 50px;
+}
+#datatables {
+	width: 600px;
+	margin-left: auto;
+	margin-right: auto;
+}
+.datacontainer {
+	margin-top: 30px;
+	padding-top: 10px;
+}
+#buttons {
+	margin-left: auto;
+	margin-right: auto;
+}
+.textleft { text-align: left; padding-left: 3px }
+.textright { text-align: right; padding-right: 3px;}
+
+.legendmarker {
+	width: 40px;
+	height:20px;
+}
+#panel-breadth .legendmarker {
+	background-color: #FFFF00;
+}
+#panel-depth .legendmarker {
+	background-color: #0929DC;
+}
+#panel-lowestCost .legendmarker {
+	background-color: #FF00FF;
+}
