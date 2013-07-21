@@ -213,7 +213,7 @@ App.Graph.edges = [
 	{"name":"odorheiusecuiesc-bacau", "nodes":["miercureaciuc", "bacau"], 
 		"distance":80, "xLabel":570, "yLabel":201},
 	{"name":"odorheiusecuiesc-onesti", "nodes":["miercureaciuc", "onesti"], 
-		"distance":65, "xLabel":580, "yLabel":233},
+		"distance":65, "xLabel":580, "yLabel":236},
 
 	{"name":"piatraneamt-suceava", "nodes":["piatraneamt", "suceava"], 
 		"distance":80, "xLabel":555, "yLabel":99},
@@ -226,9 +226,9 @@ App.Graph.edges = [
 	{"name":"bacau-iasi", "nodes":["bacau", "iasi"], 
 		"distance":110, "xLabel":674, "yLabel":127},
 	{"name":"bacau-vaslui", "nodes":["bacau", "vaslui"], 
-		"distance":80, "xLabel":707, "yLabel":188},
+		"distance":80, "xLabel":707, "yLabel":195},
 	{"name":"bacau-onesti", "nodes":["bacau", "onesti"], 
-		"distance":50, "xLabel":640, "yLabel":224},
+		"distance":50, "xLabel":635, "yLabel":224},
 
 	{"name":"iasi-vaslui", "nodes":["iasi", "vaslui"], 
 		"distance":60, "xLabel":758, "yLabel":136},
@@ -237,23 +237,23 @@ App.Graph.edges = [
 		"distance":55, "xLabel":747, "yLabel":212},
 
 	{"name":"barlad-onesti", "nodes":["barlad", "onesti"], 
-		"distance":55, "xLabel":672, "yLabel":234},
+		"distance":55, "xLabel":671, "yLabel":238},
 	{"name":"barlad-focsani", "nodes":["barlad", "focsani"], 
 		"distance":65, "xLabel":693, "yLabel":291},
 
 	{"name":"onesti-focsani", "nodes":["onesti", "focsani"], 
-		"distance":60, "xLabel":621, "yLabel":295},
+		"distance":60, "xLabel":615, "yLabel":295},
 
 	{"name":"focsani-galati", "nodes":["focsani", "galati"], 
-		"distance":35, "xLabel":701, "yLabel":350},
+		"distance":35, "xLabel":697, "yLabel":354},
 	{"name":"focsani-buzau", "nodes":["focsani", "buzau"], 
-		"distance":45, "xLabel":618, "yLabel":347},
+		"distance":45, "xLabel":614, "yLabel":354},
 
 	{"name":"galati-buzau", "nodes":["galati", "buzau"], 
-		"distance":50, "xLabel":660, "yLabel":372},
+		"distance":50, "xLabel":660, "yLabel":374},
 
 	{"name":"buzau-ploiesti", "nodes":["buzau", "ploiesti"], 
-		"distance":60, "xLabel":551, "yLabel":399},
+		"distance":60, "xLabel":551, "yLabel":402},
 
 	{"name":"ploiesti-bucharest", "nodes":["ploiesti", "bucharest"], 
 		"distance":40, "xLabel":532, "yLabel":462},
